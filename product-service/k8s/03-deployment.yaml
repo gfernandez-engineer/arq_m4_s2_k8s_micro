@@ -99,3 +99,9 @@ spec:
                 secretKeyRef:
                   name: product-service-secret
                   key: DB_PASSWORD
+
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: product-service-secret
+                  key: JWT_SECRET

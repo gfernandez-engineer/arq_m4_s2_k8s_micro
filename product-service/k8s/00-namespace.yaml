@@ -9,4 +9,4 @@ metadata:
   name: product-service
   labels:
     name: product-service
-    environment: local
+    environment: local1
