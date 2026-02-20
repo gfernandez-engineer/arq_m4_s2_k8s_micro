@@ -1,0 +1,39 @@
+meta {
+  name: 7 - Error Items Vacios
+  type: http
+  seq: 7
+}
+
+post {
+  url: {{baseUrl}}/api/orders
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "userId": 1,
+    "items": []
+  }
+}
+
+docs {
+  # Error: Items vacios
+  Envia un array de items vacio.
+  La validacion @NotEmpty del DTO rechaza la peticion antes de llegar al use case.
+
+  **Respuesta esperada (400):**
+  ```json
+  {
+    "status": 400,
+    "message": "Validation failed",
+    "errors": {
+      "items": "Order must have at least one item"
+    }
+  }
+  ```
+}

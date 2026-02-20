@@ -1,0 +1,19 @@
+meta {
+  name: 3 - Listar Ordenes
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/api/orders
+  body: none
+  auth: none
+}
+
+docs {
+  # Listar todas las ordenes
+  Retorna un array con todas las ordenes de la BD.
+  Cada orden incluye sus items con info del producto enriquecida desde Product Service.
+
+  **Respuesta esperada (200):** Array de ordenes con items y productos.
+}

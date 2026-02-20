@@ -1,0 +1,19 @@
+meta {
+  name: 4 - Obtener Orden por ID
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{baseUrl}}/api/orders/1
+  body: none
+  auth: none
+}
+
+docs {
+  # Obtener orden por ID
+  Busca una orden especifica por su ID.
+  Cambiar el /1 por el ID deseado.
+
+  **Respuesta esperada (200):** Orden individual con items y producto enriquecido.
+}

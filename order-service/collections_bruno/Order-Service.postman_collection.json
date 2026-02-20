@@ -1,0 +1,147 @@
+{
+  "info": {
+    "name": "Order Service",
+    "description": "Coleccion de pruebas para Order Service - Trabajo Final\n\nMicroservicio de gestion de ordenes con comunicacion HTTP hacia Product Service.\nIncluye el punto 3 opcional: calculo automatico de totales basado en precios actuales.\n\n**Variables:**\n- `baseUrl`: Cambiar segun entorno\n  - Docker: `http://localhost:8083`\n  - Kubernetes: `http://localhost:30083`",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:30083",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "1 - Health Check",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/orders/health",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "orders", "health"]
+        },
+        "description": "Verifica que el servicio esta corriendo.\n\nRespuesta esperada: `Order Service running with Clean Architecture!`"
+      }
+    },
+    {
+      "name": "2 - Crear Orden (Punto 3 Opcional)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"userId\": 1,\n  \"items\": [\n    {\n      \"productId\": 1,\n      \"quantity\": 2\n    },\n    {\n      \"productId\": 3,\n      \"quantity\": 1\n    }\n  ]\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/orders",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "orders"]
+        },
+        "description": "Crea una orden ejecutando el flujo completo:\n1. Valida cada producto en Product Service (HTTP)\n2. Obtiene precio actual\n3. Calcula subtotal = quantity x unitPrice\n4. Calcula totalAmount = suma de subtotals\n5. Genera numero de orden y guarda en BD\n\nRespuesta esperada: 201 Created con la orden completa."
+      }
+    },
+    {
+      "name": "3 - Listar Ordenes",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/orders",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "orders"]
+        },
+        "description": "Retorna todas las ordenes con items y producto enriquecido desde Product Service."
+      }
+    },
+    {
+      "name": "4 - Obtener Orden por ID",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/orders/1",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "orders", "1"]
+        },
+        "description": "Busca una orden por ID. Cambiar /1 por el ID deseado."
+      }
+    },
+    {
+      "name": "5 - Ordenes por Usuario",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/orders/user/1",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "orders", "user", "1"]
+        },
+        "description": "Filtra ordenes por userId. Cambiar /1 por el userId deseado."
+      }
+    },
+    {
+      "name": "6 - Error: Producto Inexistente (503)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"userId\": 1,\n  \"items\": [\n    {\n      \"productId\": 9999,\n      \"quantity\": 1\n    }\n  ]\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/orders",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "orders"]
+        },
+        "description": "Intenta crear orden con producto inexistente.\nOrder Service llama a Product Service, recibe 404, retorna 503.\n\nRespuesta esperada: `{\"status\":503,\"message\":\"Product not found with id: 9999\"}`"
+      }
+    },
+    {
+      "name": "7 - Error: Items Vacios (400)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"userId\": 1,\n  \"items\": []\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/orders",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "orders"]
+        },
+        "description": "Envia items vacios. Validacion @NotEmpty rechaza la peticion.\n\nRespuesta esperada: `{\"status\":400,\"message\":\"Validation failed\"}`"
+      }
+    },
+    {
+      "name": "8 - Error: Orden Inexistente (404)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/orders/9999",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "orders", "9999"]
+        },
+        "description": "Busca orden con ID 9999 que no existe.\n\nRespuesta esperada: `{\"status\":404,\"message\":\"Order not found with id: 9999\"}`"
+      }
+    }
+  ]
+}

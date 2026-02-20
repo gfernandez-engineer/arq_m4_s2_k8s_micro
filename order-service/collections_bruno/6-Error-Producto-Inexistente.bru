@@ -1,0 +1,41 @@
+meta {
+  name: 6 - Error Producto Inexistente
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{baseUrl}}/api/orders
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "userId": 1,
+    "items": [
+      {
+        "productId": 9999,
+        "quantity": 1
+      }
+    ]
+  }
+}
+
+docs {
+  # Error: Producto inexistente
+  Intenta crear una orden con un productId que no existe en Product Service.
+  Order Service llama a Product Service, recibe 404, y retorna 503.
+
+  **Respuesta esperada (503):**
+  ```json
+  {
+    "status": 503,
+    "message": "Product not found with id: 9999"
+  }
+  ```
+}

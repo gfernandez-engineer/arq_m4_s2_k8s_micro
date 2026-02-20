@@ -1,0 +1,24 @@
+meta {
+  name: 8 - Error Orden Inexistente
+  type: http
+  seq: 8
+}
+
+get {
+  url: {{baseUrl}}/api/orders/9999
+  body: none
+  auth: none
+}
+
+docs {
+  # Error: Orden inexistente
+  Busca una orden con ID 9999 que no existe en la BD.
+
+  **Respuesta esperada (404):**
+  ```json
+  {
+    "status": 404,
+    "message": "Order not found with id: 9999"
+  }
+  ```
+}

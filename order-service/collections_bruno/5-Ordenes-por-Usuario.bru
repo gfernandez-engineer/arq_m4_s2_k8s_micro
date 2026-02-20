@@ -1,0 +1,19 @@
+meta {
+  name: 5 - Ordenes por Usuario
+  type: http
+  seq: 5
+}
+
+get {
+  url: {{baseUrl}}/api/orders/user/1
+  body: none
+  auth: none
+}
+
+docs {
+  # Ordenes por usuario
+  Filtra ordenes por userId.
+  Cambiar el /1 por el userId deseado.
+
+  **Respuesta esperada (200):** Array con las ordenes del usuario.
+}

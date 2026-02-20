@@ -1,0 +1,21 @@
+meta {
+  name: 1 - Health Check
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api/orders/health
+  body: none
+  auth: none
+}
+
+docs {
+  # Health Check
+  Verifica que el servicio esta corriendo correctamente.
+
+  **Respuesta esperada (200):**
+  ```
+  Order Service running with Clean Architecture!
+  ```
+}

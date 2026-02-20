@@ -1,29 +1,32 @@
 # ORDER SERVICE - Despliegue en Kubernetes
 
-Guía paso a paso para desplegar Order Service en Kubernetes usando Docker Desktop.
-Cada comando tiene una explicación de **qué hace** y **por qué lo usamos**.
+Guia paso a paso para desplegar Order Service en Kubernetes usando Docker Desktop.
+Cada comando tiene una explicacion de **que hace** y **por que lo usamos**.
 
-> PRE-REQUISITO: Haber completado [README_01_DOCKER.md](README_01_DOCKER.md) (imagen order-service:1.0 ya construida)
+> **PRE-REQUISITO:** Haber completado [README_01_DOCKER.md](README_01_DOCKER.md) (imagen order-service:1.0 ya construida)
+
+> **NOTA:** Los comandos curl se muestran en 2 formatos: **CMD** y **PowerShell**.
+> Usa el que corresponda a tu terminal.
 
 ---
 
 ## Conceptos clave de Kubernetes
 
 ```
-ANALOGÍA: Docker vs Kubernetes
+ANALOGIA: Docker vs Kubernetes
 
   Docker = Un COCINERO que sabe preparar UN plato a la vez.
-           Tú le dices: "prepara esto" y "sírvelo en este plato".
-           Si se cae el plato, tú tienes que volver a pedirlo.
+           Tu le dices: "prepara esto" y "sirvelo en este plato".
+           Si se cae el plato, tu tienes que volver a pedirlo.
 
   Kubernetes = Un CHEF JEFE que gestiona una COCINA COMPLETA.
-               Tú le dices: "quiero 3 platos de pasta siempre listos".
-               Si un plato se cae, él automáticamente prepara otro.
-               Si llegan más clientes, él añade más cocineros.
+               Tu le dices: "quiero 3 platos de pasta siempre listos".
+               Si un plato se cae, el automaticamente prepara otro.
+               Si llegan mas clientes, el anade mas cocineros.
 
-En términos técnicos:
-  Docker      → Ejecuta contenedores individuales
-  Kubernetes  → Orquesta múltiples contenedores, los mantiene vivos,
+En terminos tecnicos:
+  Docker      -> Ejecuta contenedores individuales
+  Kubernetes  -> Orquesta multiples contenedores, los mantiene vivos,
                 los escala, y gestiona la red entre ellos
 ```
 
@@ -50,21 +53,21 @@ En términos técnicos:
 |  |  |                                   +----+-----+          | |  |
 |  |  |                                        |                | |  |
 |  |  |  Service (NodePort)                    |                | |  |
-|  |  |  localhost:30083 ──────────────────────+                | |  |
+|  |  |  localhost:30083 ----------------------+                | |  |
 |  |  |                                                          | |  |
 |  |  +----------------------------------------------------------+ |  |
 |  +--------------------------------------------------------------+  |
 +--------------------------------------------------------------------+
 
-Flujo de una petición:
-  curl localhost:30083 → Service (NodePort) → Pod (contenedor:8083)
+Flujo de una peticion:
+  curl localhost:30083 -> Service (NodePort) -> Pod (contenedor:8083)
 
-¿Qué es cada recurso?
+Que es cada recurso?
   Namespace   = Carpeta que agrupa todo lo de un servicio (aislamiento)
-  ConfigMap   = Archivo de configuración (variables no sensibles)
-  Secret      = Caja fuerte (contraseñas codificadas en Base64)
-  Deployment  = "Quiero N réplicas de este contenedor siempre corriendo"
-  Pod         = La unidad mínima: un contenedor corriendo
+  ConfigMap   = Archivo de configuracion (variables no sensibles)
+  Secret      = Caja fuerte (contrasenas codificadas en Base64)
+  Deployment  = "Quiero N replicas de este contenedor siempre corriendo"
+  Pod         = La unidad minima: un contenedor corriendo
   Service     = Puerta de entrada al pod (red + balanceo de carga)
 ```
 
@@ -72,79 +75,87 @@ Flujo de una petición:
 
 ## PASO 1: Pre-requisitos
 
-### 1.1 Verificar que Kubernetes está habilitado
+### 1.1 Verificar que Kubernetes esta habilitado
 
 ```bash
 # kubectl = herramienta CLI para hablar con Kubernetes
 # config use-context = seleccionar el cluster al que nos conectamos
 # docker-desktop = el cluster K8s local que viene con Docker Desktop
 #
-# Si tienes múltiples clusters (ej: uno en la nube), esto asegura
+# Si tienes multiples clusters (ej: uno en la nube), esto asegura
 # que los comandos van al cluster correcto (tu PC local)
 kubectl config use-context docker-desktop
 
-# cluster-info = verificar que el cluster está corriendo y accesible
+# cluster-info = verificar que el cluster esta corriendo y accesible
 # Si responde con una URL, el cluster funciona
-# Si dice "refused", Kubernetes no está habilitado en Docker Desktop
+# Si dice "refused", Kubernetes no esta habilitado en Docker Desktop
 kubectl cluster-info
 
 # Output esperado:
 # Kubernetes control plane is running at https://127.0.0.1:6443
 ```
 
-### Docker Desktop - Pestaña KUBERNETES
+### Docker Desktop - Pestana KUBERNETES
 ```
-Abre Docker Desktop > Kubernetes (icono de timón de barco ⎈)
+Abre Docker Desktop > Kubernetes (icono de timon de barco)
 
-¿QUÉ MUESTRA ESTA PESTAÑA?
-  Una vista gráfica de TODOS los recursos del cluster K8s.
+QUE MUESTRA ESTA PESTANA?
+  Una vista grafica de TODOS los recursos del cluster K8s.
   Es como "un explorador de archivos" pero para Kubernetes.
 
-Antes de desplegar, deberías ver:
+Antes de desplegar, deberias ver:
   - Namespaces existentes: default, user-service, product-service
   - Pods de otros servicios ya desplegados y corriendo
 
 EQUIVALENTE EN TERMINAL:
-  Esta pestaña muestra lo mismo que ejecutar:
+  Esta pestana muestra lo mismo que ejecutar:
   kubectl get all --all-namespaces
 
-CONSEJO: Mantén esta pestaña abierta mientras sigues la guía.
-Así ves en tiempo real cómo aparecen los recursos que vas creando.
+CONSEJO: Manten esta pestana abierta mientras sigues la guia.
+Asi ves en tiempo real como aparecen los recursos que vas creando.
 ```
 
-### 1.2 Verificar que product-service está en K8s
+### 1.2 Verificar que product-service esta en K8s
 
 ```bash
 # kubectl get all = listar TODOS los recursos de K8s
 # -n product-service = filtrar por namespace "product-service"
 #   -n = "namespace" (sin esto, usa el namespace "default")
 #
-# ¿Por qué verificar esto?
+# Por que verificar esto?
 #   Order Service NECESITA comunicarse con Product Service.
-#   Si Product Service no está corriendo, crear órdenes fallará.
+#   Si Product Service no esta corriendo, crear ordenes fallara.
 kubectl get all -n product-service
 
-# Deberías ver 3 tipos de recursos:
+# Deberias ver 3 tipos de recursos:
 # NAME                                READY   STATUS    RESTARTS   AGE
 # pod/product-service-xxxxx           1/1     Running   0          Xh
-#   → El POD está corriendo (1/1 = 1 de 1 contenedores listos)
+#   -> El POD esta corriendo (1/1 = 1 de 1 contenedores listos)
 #
 # NAME                      TYPE       CLUSTER-IP     PORT(S)        AGE
 # service/product-service   NodePort   10.96.x.x      80:30082/TCP   Xh
-#   → El SERVICE expone el pod en puerto 30082
+#   -> El SERVICE expone el pod en puerto 30082
 #
 # NAME                              READY   UP-TO-DATE   AVAILABLE   AGE
 # deployment.apps/product-service   1/1     1            1           Xh
-#   → El DEPLOYMENT gestiona 1 réplica, 1 disponible
-
-# Probar que product-service responde:
-# curl al NodePort 30082 (el puerto expuesto por el Service K8s)
-curl http://localhost:30082/api/products/health
-
-# Esperado: Product Service running with Clean Architecture!
+#   -> El DEPLOYMENT gestiona 1 replica, 1 disponible
 ```
 
-### 1.3 Verificar que la BD orderdb está corriendo
+Probar que product-service responde:
+
+#### En CMD:
+```cmd
+curl http://localhost:30082/api/products/health
+```
+
+#### En PowerShell:
+```powershell
+Invoke-RestMethod -Uri http://localhost:30082/api/products/health
+```
+
+**Esperado:** `Product Service running with Clean Architecture!`
+
+### 1.3 Verificar que la BD orderdb esta corriendo
 
 ```bash
 # Las BD corren en Docker (docker-compose), NO en Kubernetes
@@ -167,24 +178,24 @@ docker images | grep order-service
 # Output esperado:
 # order-service  1.0  abc123def456  X hours ago  393MB
 #
-# Si NO aparece → debes construirla primero (ver README_01_DOCKER.md, Paso 4)
+# Si NO aparece -> debes construirla primero (ver README_01_DOCKER.md, Paso 4)
 ```
 
-### Docker Desktop - Pestaña IMAGES
+### Docker Desktop - Pestana IMAGES
 ```
 Abre Docker Desktop > Images
 
 Verifica que "order-service:1.0" aparece en la lista.
-Kubernetes usará esta imagen LOCAL para crear los pods.
+Kubernetes usara esta imagen LOCAL para crear los pods.
 
-¿POR QUÉ ES IMPORTANTE?
+POR QUE ES IMPORTANTE?
   En el Deployment (paso 5) tenemos: imagePullPolicy: Never
   Esto le dice a Kubernetes:
-    "Usa la imagen que ya tienes en tu máquina local.
+    "Usa la imagen que ya tienes en tu maquina local.
      NO intentes descargarla de Docker Hub ni de internet."
 
-  Si la imagen NO existe localmente, el pod quedará en estado
-  "ErrImageNeverPull" y nunca arrancará.
+  Si la imagen NO existe localmente, el pod quedara en estado
+  "ErrImageNeverPull" y nunca arrancara.
 ```
 
 ---
@@ -193,19 +204,19 @@ Kubernetes usará esta imagen LOCAL para crear los pods.
 
 ```bash
 # kubectl apply = crear o actualizar un recurso en Kubernetes
-# -f = "file" = leer la definición del recurso desde un archivo YAML
+# -f = "file" = leer la definicion del recurso desde un archivo YAML
 #
-# ¿Qué es un Namespace?
+# Que es un Namespace?
 #   Es como una CARPETA que agrupa todos los recursos de un servicio.
 #   Cada microservicio tiene su propio namespace para:
 #     - Aislar recursos (no se mezclan con otros servicios)
-#     - Facilitar la eliminación (borrar el namespace borra TODO lo de adentro)
+#     - Facilitar la eliminacion (borrar el namespace borra TODO lo de adentro)
 #     - Organizar el cluster
 #
-# ANALOGÍA: Si K8s es un edificio, cada namespace es un DEPARTAMENTO.
-#   user-service → Depto 1
-#   product-service → Depto 2
-#   order-service → Depto 3
+# ANALOGIA: Si K8s es un edificio, cada namespace es un DEPARTAMENTO.
+#   user-service -> Depto 1
+#   product-service -> Depto 2
+#   order-service -> Depto 3
 kubectl apply -f k8s/00-namespace.yaml
 
 # Output:
@@ -220,20 +231,20 @@ kubectl get namespaces
 
 # Output:
 # NAME              STATUS   AGE
-# default           Active   Xd    ← namespace por defecto (no lo usamos)
-# kube-system       Active   Xd    ← sistema interno de K8s (no tocar)
+# default           Active   Xd    <- namespace por defecto (no lo usamos)
+# kube-system       Active   Xd    <- sistema interno de K8s (no tocar)
 # user-service      Active   Xd
 # product-service   Active   Xd
-# order-service     Active   5s    ← NUEVO - acabamos de crearlo
+# order-service     Active   5s    <- NUEVO - acabamos de crearlo
 ```
 
-### Docker Desktop - Pestaña KUBERNETES
+### Docker Desktop - Pestana KUBERNETES
 ```
-Refresca la pestaña Kubernetes.
+Refresca la pestana Kubernetes.
 
-Deberías ver un nuevo namespace "order-service" (vacío por ahora).
-Todavía no tiene pods, services ni deployments dentro.
-Es como haber creado una carpeta vacía - ahora vamos a llenarla.
+Deberias ver un nuevo namespace "order-service" (vacio por ahora).
+Todavia no tiene pods, services ni deployments dentro.
+Es como haber creado una carpeta vacia - ahora vamos a llenarla.
 ```
 
 ---
@@ -241,17 +252,17 @@ Es como haber creado una carpeta vacía - ahora vamos a llenarla.
 ## PASO 3: Crear el ConfigMap
 
 ```bash
-# ConfigMap = recurso K8s que guarda configuración NO sensible
+# ConfigMap = recurso K8s que guarda configuracion NO sensible
 # Son pares clave=valor que se inyectan como variables de entorno en los pods
 #
-# ¿Por qué no poner la config directamente en el Deployment?
-#   Separar la configuración del deployment permite:
+# Por que no poner la config directamente en el Deployment?
+#   Separar la configuracion del deployment permite:
 #   - Cambiar config sin redesplegar la app
-#   - Reutilizar la misma config en múltiples pods
-#   - Tener la configuración versionada y visible
+#   - Reutilizar la misma config en multiples pods
+#   - Tener la configuracion versionada y visible
 #
-# ANALOGÍA: El ConfigMap es como un archivo .env
-#   pero gestionado por Kubernetes en vez de estar en tu máquina
+# ANALOGIA: El ConfigMap es como un archivo .env
+#   pero gestionado por Kubernetes en vez de estar en tu maquina
 kubectl apply -f k8s/01-configmap.yaml
 
 # Output:
@@ -266,7 +277,7 @@ Verificar contenido:
 # -n order-service = en el namespace order-service
 kubectl describe configmap order-service-config -n order-service
 
-# Verás las variables que contiene:
+# Veras las variables que contiene:
 # PRODUCT_SERVICE_URL: http://product-service.product-service.svc.cluster.local
 # DB_URL:              jdbc:postgresql://host.docker.internal:5435/orderdb
 # DDL_AUTO:            update
@@ -276,19 +287,19 @@ kubectl describe configmap order-service-config -n order-service
 
 ### Entender la URL del Product Service dentro de Kubernetes
 ```
-La URL más importante del ConfigMap es PRODUCT_SERVICE_URL:
+La URL mas importante del ConfigMap es PRODUCT_SERVICE_URL:
 
   http://product-service.product-service.svc.cluster.local
-        └──────┬──────┘.└───────┬──────┘.└┬┘.└────┬────┘
+        |------v------| |-------v------| |-v-| |----v----|
            Service          Namespace   Tipo   Cluster
            name             name       (svc)   (local)
 
-¿QUÉ ES ESTO?
-  Kubernetes tiene su propio DNS interno (como un directorio telefónico).
-  Cada Service que creas recibe automáticamente un nombre DNS.
+QUE ES ESTO?
+  Kubernetes tiene su propio DNS interno (como un directorio telefonico).
+  Cada Service que creas recibe automaticamente un nombre DNS.
 
-¿POR QUÉ NO USAMOS localhost O UNA IP?
-  Porque los pods son EFÍMEROS: se crean y destruyen constantemente.
+POR QUE NO USAMOS localhost O UNA IP?
+  Porque los pods son EFIMEROS: se crean y destruyen constantemente.
   Cada vez que un pod se recrea, puede tener una IP diferente.
   El DNS de K8s siempre apunta al pod correcto, sin importar su IP.
 
@@ -299,9 +310,9 @@ FORMATO: {service-name}.{namespace}.svc.cluster.local
   - cluster.local = dominio del cluster
 
 EQUIVALENCIA:
-  En Docker usábamos: http://host.docker.internal:30082
+  En Docker usabamos: http://host.docker.internal:30082
   En K8s usamos:      http://product-service.product-service.svc.cluster.local
-  El DNS interno es más elegante: no dependes de puertos ni de IPs.
+  El DNS interno es mas elegante: no dependes de puertos ni de IPs.
 ```
 
 ---
@@ -309,19 +320,19 @@ EQUIVALENCIA:
 ## PASO 4: Crear el Secret
 
 ```bash
-# Secret = recurso K8s para datos SENSIBLES (contraseñas, tokens, llaves)
+# Secret = recurso K8s para datos SENSIBLES (contrasenas, tokens, llaves)
 # Similar al ConfigMap pero con los valores codificados en Base64
 #
-# ¿Qué diferencia hay entre ConfigMap y Secret?
-#   ConfigMap → datos en texto plano (URLs, nombres, configuración general)
-#   Secret    → datos codificados en Base64 (contraseñas, tokens)
+# Que diferencia hay entre ConfigMap y Secret?
+#   ConfigMap -> datos en texto plano (URLs, nombres, configuracion general)
+#   Secret    -> datos codificados en Base64 (contrasenas, tokens)
 #
-# IMPORTANTE: Base64 NO es encriptación, es solo codificación.
-# Cualquiera puede decodificarlo. En producción se usa con herramientas
+# IMPORTANTE: Base64 NO es encriptacion, es solo codificacion.
+# Cualquiera puede decodificarlo. En produccion se usa con herramientas
 # como Vault o Sealed Secrets para encriptar de verdad.
 #
-# ¿Por qué separar los secrets del ConfigMap?
-#   - Kubernetes controla quién puede leer Secrets (RBAC)
+# Por que separar los secrets del ConfigMap?
+#   - Kubernetes controla quien puede leer Secrets (RBAC)
 #   - Los Secrets no aparecen en logs ni en "kubectl describe"
 #   - Se pueden montar como archivos en vez de variables de entorno
 kubectl apply -f k8s/02-secret.yaml
@@ -340,11 +351,11 @@ kubectl get secret -n order-service
 # NAME                   TYPE     DATA   AGE
 # order-service-secret   Opaque   2      5s
 #
-# TYPE: Opaque = secret genérico (key-value pairs)
+# TYPE: Opaque = secret generico (key-value pairs)
 # DATA: 2 = contiene 2 claves (DB_USERNAME y DB_PASSWORD)
 
 # Ver las claves (pero no los valores):
-# describe muestra los nombres de las claves y el tamaño en bytes
+# describe muestra los nombres de las claves y el tamano en bytes
 kubectl describe secret order-service-secret -n order-service
 
 # Para decodificar un valor manualmente (solo para verificar):
@@ -354,7 +365,15 @@ echo "cG9zdGdyZXM=" | base64 -d
 # Output: postgres
 #
 # "cG9zdGdyZXM=" es "postgres" codificado en Base64
-# Puedes verificar: echo -n "postgres" | base64 → cG9zdGdyZXM=
+# Puedes verificar: echo -n "postgres" | base64 -> cG9zdGdyZXM=
+```
+
+En PowerShell para decodificar Base64:
+```powershell
+# [System.Text.Encoding]::UTF8.GetString convierte bytes a texto
+# [System.Convert]::FromBase64String convierte Base64 a bytes
+[System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String("cG9zdGdyZXM="))
+# Output: postgres
 ```
 
 ---
@@ -362,25 +381,25 @@ echo "cG9zdGdyZXM=" | base64 -d
 ## PASO 5: Crear el Deployment
 
 ```bash
-# Deployment = recurso K8s que gestiona la creación y vida de los pods
-# Le dices: "quiero N réplicas de este contenedor" y K8s se encarga
+# Deployment = recurso K8s que gestiona la creacion y vida de los pods
+# Le dices: "quiero N replicas de este contenedor" y K8s se encarga
 #
-# ¿Qué hace un Deployment?
-#   1. Crea los pods según la especificación
-#   2. Monitorea que estén vivos (health checks)
-#   3. Si un pod muere, crea uno nuevo automáticamente
+# Que hace un Deployment?
+#   1. Crea los pods segun la especificacion
+#   2. Monitorea que esten vivos (health checks)
+#   3. Si un pod muere, crea uno nuevo automaticamente
 #   4. Permite actualizaciones sin downtime (rolling updates)
 #
-# ANALOGÍA:
+# ANALOGIA:
 #   Sin Deployment (Docker puro): "Cocina 1 plato. Si se cae, yo te aviso"
-#   Con Deployment (K8s): "Mantén siempre 1 plato listo. Si se cae, haz otro"
+#   Con Deployment (K8s): "Manten siempre 1 plato listo. Si se cae, haz otro"
 kubectl apply -f k8s/03-deployment.yaml
 
 # Output:
 # deployment.apps/order-service created
 ```
 
-### Verificar que el pod está corriendo:
+### Verificar que el pod esta corriendo:
 ```bash
 # kubectl get pods = listar los pods del namespace
 # -n order-service = filtrar por namespace
@@ -395,25 +414,25 @@ kubectl get pods -n order-service
 # DESGLOSE DEL NOMBRE DEL POD:
 #   order-service     = nombre del deployment
 #   6b8f9d7c4f        = ID del ReplicaSet (generado por K8s)
-#   abc12             = ID único del pod (generado por K8s)
+#   abc12             = ID unico del pod (generado por K8s)
 #
 # COLUMNAS:
 #   READY    = contenedores listos / total (1/1 = perfecto)
 #   STATUS   = estado actual del pod
-#   RESTARTS = cuántas veces se ha reiniciado (0 = sin problemas)
+#   RESTARTS = cuantas veces se ha reiniciado (0 = sin problemas)
 #
 # POSIBLES STATUS:
-#   ContainerCreating → K8s está preparando el contenedor (espera)
-#   Running           → todo bien, la app está corriendo
-#   CrashLoopBackOff  → la app arranca y se cae repetidamente (ver logs)
-#   Error             → algo falló al crear el contenedor (ver logs)
-#   ErrImageNeverPull → la imagen Docker no existe localmente
+#   ContainerCreating -> K8s esta preparando el contenedor (espera)
+#   Running           -> todo bien, la app esta corriendo
+#   CrashLoopBackOff  -> la app arranca y se cae repetidamente (ver logs)
+#   Error             -> algo fallo al crear el contenedor (ver logs)
+#   ErrImageNeverPull -> la imagen Docker no existe localmente
 ```
 
 ### Ver logs del pod:
 ```bash
 # kubectl logs = ver la salida de consola del pod (como docker logs)
-# -f = "follow" = mantener la conexión abierta y mostrar logs en tiempo real
+# -f = "follow" = mantener la conexion abierta y mostrar logs en tiempo real
 #   (como tail -f en Linux)
 # -n order-service = namespace
 #
@@ -424,53 +443,53 @@ kubectl logs -f <POD_NAME> -n order-service
 # (lo obtuviste del comando kubectl get pods)
 # Ejemplo: kubectl logs -f order-service-6b8f9d7c4f-abc12 -n order-service
 
-# Deberías ver los logs de Spring Boot:
+# Deberias ver los logs de Spring Boot:
 # Starting OrderServiceApplication using Java 21...
-# Tomcat started on port 8083                    ← servidor web listo
-# Started OrderServiceApplication in X seconds   ← app lista para recibir peticiones
+# Tomcat started on port 8083                    <- servidor web listo
+# Started OrderServiceApplication in X seconds   <- app lista para recibir peticiones
 #
-# Si ves "Connection refused" → la BD no es accesible desde el pod
-# Si ves "Table not found" → DDL_AUTO no está en "update"
+# Si ves "Connection refused" -> la BD no es accesible desde el pod
+# Si ves "Table not found" -> DDL_AUTO no esta en "update"
 ```
 
-### Docker Desktop - Pestaña KUBERNETES
+### Docker Desktop - Pestana KUBERNETES
 ```
 Abre Docker Desktop > Kubernetes
 
-Ahora en el namespace "order-service" deberías ver:
+Ahora en el namespace "order-service" deberias ver:
   - 1 Deployment: order-service (1/1 ready)
   - 1 Pod: order-service-xxxxx (Running, punto verde)
 
 Haz clic en el pod para ver detalles:
   - Status: Running
   - Containers: order-service (imagen order-service:1.0)
-  - Events: Pulled → Created → Started
-    (K8s jaló la imagen, creó el contenedor, y lo arrancó)
+  - Events: Pulled -> Created -> Started
+    (K8s jalo la imagen, creo el contenedor, y lo arranco)
 ```
 
-### Docker Desktop - Pestaña CONTAINERS
+### Docker Desktop - Pestana CONTAINERS
 ```
 Abre Docker Desktop > Containers
 
-Verás un nuevo contenedor creado por Kubernetes:
+Veras un nuevo contenedor creado por Kubernetes:
   k8s_order-service_order-service-xxxxx_order-service_xxxxx
 
-¿POR QUÉ EL NOMBRE ES TAN LARGO?
-  Kubernetes nombra los contenedores así:
+POR QUE EL NOMBRE ES TAN LARGO?
+  Kubernetes nombra los contenedores asi:
   k8s_{container}_{pod}_{namespace}_{uid}
 
-  - k8s_              → prefijo que indica "creado por K8s" (no manual)
-  - order-service     → nombre del contenedor (del Deployment)
-  - order-service-xxx → nombre del pod
-  - order-service     → namespace
-  - xxxxx             → ID único
+  - k8s_              -> prefijo que indica "creado por K8s" (no manual)
+  - order-service     -> nombre del contenedor (del Deployment)
+  - order-service-xxx -> nombre del pod
+  - order-service     -> namespace
+  - xxxxx             -> ID unico
 
 IMPORTANTE:
   NO detengas este contenedor con "docker stop".
-  Kubernetes lo gestiona. Si lo detienes, K8s lo recreará automáticamente
-  (porque el Deployment dice "quiero 1 réplica siempre corriendo").
+  Kubernetes lo gestiona. Si lo detienes, K8s lo recreara automaticamente
+  (porque el Deployment dice "quiero 1 replica siempre corriendo").
 
-Haz clic en él para ver Logs, Inspect, Terminal, Stats
+Haz clic en el para ver Logs, Inspect, Terminal, Stats
 (funciona igual que cualquier otro contenedor Docker).
 ```
 
@@ -513,9 +532,9 @@ exit
 # Sin Service, los pods solo son accesibles DENTRO del cluster
 #
 # Tipos de Service:
-#   ClusterIP  → solo accesible dentro del cluster (para comunicación entre pods)
-#   NodePort   → accesible desde fuera del cluster (desde tu PC via localhost)
-#   LoadBalancer → crea un balanceador externo (para producción en la nube)
+#   ClusterIP  -> solo accesible dentro del cluster (para comunicacion entre pods)
+#   NodePort   -> accesible desde fuera del cluster (desde tu PC via localhost)
+#   LoadBalancer -> crea un balanceador externo (para produccion en la nube)
 #
 # Usamos NodePort porque queremos hacer "curl localhost:30083" desde nuestra PC
 kubectl apply -f k8s/04-service.yaml
@@ -527,7 +546,7 @@ kubectl apply -f k8s/04-service.yaml
 Verificar:
 ```bash
 # kubectl get service = listar los services del namespace
-# (también puedes usar "kubectl get svc" como abreviación)
+# (tambien puedes usar "kubectl get svc" como abreviacion)
 kubectl get service -n order-service
 
 # Output:
@@ -536,7 +555,7 @@ kubectl get service -n order-service
 #
 # COLUMNAS:
 #   TYPE       = NodePort (accesible desde tu PC)
-#   CLUSTER-IP = IP interna del cluster (K8s la asigna automáticamente)
+#   CLUSTER-IP = IP interna del cluster (K8s la asigna automaticamente)
 #   PORT(S)    = 80:30083 = puerto_interno:puerto_externo
 ```
 
@@ -558,41 +577,41 @@ Tu PC (localhost)           Kubernetes
                                  v
                           order-service.jar (server.port=8083)
 
-EXPLICACIÓN DE CADA PUERTO:
+EXPLICACION DE CADA PUERTO:
 
   nodePort: 30083
-    → El puerto que usas en tu PC para acceder al servicio
-    → Rango permitido: 30000-32767 (regla de Kubernetes)
-    → Es como la puerta de entrada del edificio
+    -> El puerto que usas en tu PC para acceder al servicio
+    -> Rango permitido: 30000-32767 (regla de Kubernetes)
+    -> Es como la puerta de entrada del edificio
 
   port: 80
-    → Puerto interno del Service dentro del cluster
-    → Otros pods lo usan para comunicarse (via DNS K8s)
-    → Es como el número de departamento
+    -> Puerto interno del Service dentro del cluster
+    -> Otros pods lo usan para comunicarse (via DNS K8s)
+    -> Es como el numero de departamento
 
   targetPort: 8083
-    → Puerto real donde corre tu app Spring Boot
-    → Definido en application.yaml como server.port: 8083
-    → Es como la puerta de la oficina dentro del departamento
+    -> Puerto real donde corre tu app Spring Boot
+    -> Definido en application.yaml como server.port: 8083
+    -> Es como la puerta de la oficina dentro del departamento
 
 RESUMEN:
   Desde tu PC:    curl localhost:30083
   Desde otro pod: curl http://order-service.order-service.svc.cluster.local
-                  (usa port 80 automáticamente)
+                  (usa port 80 automaticamente)
 ```
 
-### Docker Desktop - Pestaña KUBERNETES
+### Docker Desktop - Pestana KUBERNETES
 ```
 Abre Docker Desktop > Kubernetes
 
-En el namespace "order-service" ahora deberías ver el conjunto COMPLETO:
-  - 1 Deployment: order-service (1/1)  → gestor de pods
-  - 1 Pod: Running (punto verde)       → contenedor corriendo
-  - 1 Service: NodePort 80:30083       → puerta de entrada
+En el namespace "order-service" ahora deberias ver el conjunto COMPLETO:
+  - 1 Deployment: order-service (1/1)  -> gestor de pods
+  - 1 Pod: Running (punto verde)       -> contenedor corriendo
+  - 1 Service: NodePort 80:30083       -> puerta de entrada
 
 Todo en verde = todo funcionando correctamente.
 
-Si algo está en rojo o amarillo → hay un problema (ver troubleshooting al final).
+Si algo esta en rojo o amarillo -> hay un problema (ver troubleshooting al final).
 ```
 
 ---
@@ -600,54 +619,73 @@ Si algo está en rojo o amarillo → hay un problema (ver troubleshooting al fin
 ## PASO 7: Validar el flujo completo en Kubernetes
 
 > NOTA: Ahora usamos puerto **30083** (NodePort de K8s) en vez de 8083 (Docker directo).
-> La aplicación es la misma, solo cambia cómo llegas a ella.
+> La aplicacion es la misma, solo cambia como llegas a ella.
 
 ### 7.1 Health Check
-```bash
-# Verificar que el servicio responde a través de Kubernetes
-# Si responde, toda la cadena funciona: NodePort → Service → Pod → App
-curl -s http://localhost:30083/api/orders/health
 
-# Esperado: Order Service running with Clean Architecture!
-#
-# Si dice "Connection refused" → el Service no se creó correctamente
-# Si dice "timeout" → el pod no está corriendo
+#### En CMD:
+```cmd
+curl -s http://localhost:30083/api/orders/health
 ```
+
+#### En PowerShell:
+```powershell
+Invoke-RestMethod -Uri http://localhost:30083/api/orders/health
+```
+
+**Esperado:** `Order Service running with Clean Architecture!`
+
+---
 
 ### 7.2 Actuator Health (health check de K8s)
-```bash
-# /actuator/health = endpoint de Spring Boot Actuator
-# K8s lo usa para sus health checks automáticos:
-#   - livenessProbe: "¿la app está viva?" (si no → reiniciar pod)
-#   - readinessProbe: "¿la app puede recibir tráfico?" (si no → no enviar peticiones)
+
+#### En CMD:
+```cmd
+REM /actuator/health = endpoint de Spring Boot Actuator
+REM K8s lo usa para sus health checks automaticos:
+REM   - livenessProbe: "la app esta viva?" (si no -> reiniciar pod)
+REM   - readinessProbe: "la app puede recibir trafico?" (si no -> no enviar peticiones)
 curl -s http://localhost:30083/actuator/health
-
-# Esperado:
-# {"status":"UP","groups":["liveness","readiness"]}
-#
-# "UP" = la app está sana
-# "DOWN" = algo falla (BD no conecta, etc.)
 ```
 
-### 7.3 Crear una orden (el test más importante)
-```bash
-# Este es el test CLAVE porque demuestra la comunicación entre microservicios:
-#   1. Tu curl llega a order-service (en K8s, vía NodePort 30083)
-#   2. Order-service llama a product-service usando el DNS interno de K8s:
-#      http://product-service.product-service.svc.cluster.local
-#   3. Product-service valida que los productos existen y devuelve precios
-#   4. Order-service calcula totales y guarda en la BD orderdb
-#
-# -s = silent (no mostrar barra de progreso)
-# -X POST = método HTTP POST
-# -H = header (cabecera HTTP)
-# -d = data (cuerpo de la petición en JSON)
-curl -s -X POST http://localhost:30083/api/orders \
-  -H "Content-Type: application/json" \
-  -d '{"userId": 1, "items": [{"productId": 1, "quantity": 2}, {"productId": 3, "quantity": 1}]}'
+#### En PowerShell:
+```powershell
+# /actuator/health = endpoint de Spring Boot Actuator
+# K8s lo usa para sus health checks automaticos
+Invoke-RestMethod -Uri http://localhost:30083/actuator/health
 ```
 
-Respuesta esperada (201 Created):
+**Esperado:** `{"status":"UP","groups":["liveness","readiness"]}`
+
+---
+
+### 7.3 Crear una orden (el test mas importante)
+
+```
+Este es el test CLAVE porque demuestra la comunicacion entre microservicios
+Y el PUNTO 3 OPCIONAL (calculo automatico de totales):
+  1. Tu curl llega a order-service (en K8s, via NodePort 30083)
+  2. Order-service llama a product-service usando el DNS interno de K8s
+  3. Product-service VALIDA que los productos existen y devuelve PRECIOS ACTUALES
+  4. Order-service calcula subtotal = quantity x unitPrice
+  5. Order-service calcula totalAmount = suma de subtotals
+  6. Guarda en la BD orderdb y devuelve la orden creada
+```
+
+#### En CMD:
+```cmd
+curl.exe -s -X POST http://localhost:30083/api/orders -H "Content-Type: application/json" -d "{\"userId\": 1, \"items\": [{\"productId\": 1, \"quantity\": 2}, {\"productId\": 3, \"quantity\": 1}]}"
+```
+
+#### En PowerShell:
+```powershell
+Invoke-RestMethod -Uri http://localhost:30083/api/orders `
+  -Method POST `
+  -Headers @{ "Content-Type" = "application/json" } `
+  -Body '{"userId": 1, "items": [{"productId": 1, "quantity": 2}, {"productId": 3, "quantity": 1}]}'
+```
+
+**Respuesta esperada (201 Created):**
 ```json
 {
   "id": 1,
@@ -669,7 +707,7 @@ Respuesta esperada (201 Created):
     {
       "product": {
         "id": 3,
-        "name": "Teclado Mecánico Keychron K8",
+        "name": "Teclado Mecanico Keychron K8",
         "price": 89.99
       },
       "quantity": 1,
@@ -680,30 +718,30 @@ Respuesta esperada (201 Created):
 }
 ```
 
-### Docker Desktop - Pestaña CONTAINERS > order-service > Logs
+### Docker Desktop - Pestana CONTAINERS > order-service > Logs
 ```
-Después de crear la orden, revisa los logs del contenedor K8s.
+Despues de crear la orden, revisa los logs del contenedor K8s.
 Haz clic en el contenedor k8s_order-service_... > Logs
 
-Deberías ver la COMUNICACIÓN ENTRE SERVICIOS dentro del cluster:
+Deberias ver la COMUNICACION ENTRE SERVICIOS dentro del cluster:
 
   INFO  REST request to create order for userId: 1
-  INFO  Calling Product Service to get product with id: 1        ← llama a product-service
-  INFO  Product retrieved successfully: ProductDto(id=1, ...)    ← respuesta exitosa
-  INFO  Calling Product Service to get product with id: 3        ← llama de nuevo
-  INFO  Product retrieved successfully: ProductDto(id=3, ...)    ← respuesta exitosa
-  INFO  Order created successfully with number: ORD-2026-001     ← guardado en BD
+  INFO  Calling Product Service to get product with id: 1        <- llama a product-service
+  INFO  Product retrieved successfully: ProductDto(id=1, ...)    <- respuesta exitosa
+  INFO  Calling Product Service to get product with id: 3        <- llama de nuevo
+  INFO  Product retrieved successfully: ProductDto(id=3, ...)    <- respuesta exitosa
+  INFO  Order created successfully with number: ORD-2026-001     <- guardado en BD
 
-ESTO ES LO MÁS IMPORTANTE:
+ESTO ES LO MAS IMPORTANTE:
   Demuestra que order-service (en namespace order-service)
   se comunica exitosamente con product-service (en namespace product-service)
-  usando el DNS interno de Kubernetes. ¡Los microservicios hablan entre sí!
+  usando el DNS interno de Kubernetes. Los microservicios hablan entre si!
 ```
 
 ### Ver logs desde terminal (alternativa):
 ```bash
 # Misma info que Docker Desktop > Logs, pero desde terminal
-# Útil si prefieres la terminal o necesitas filtrar/buscar texto
+# Util si prefieres la terminal o necesitas filtrar/buscar texto
 kubectl logs -f <POD_NAME> -n order-service
 
 # Truco: si no quieres copiar el nombre del pod, puedes usar:
@@ -712,50 +750,93 @@ kubectl logs -f -l app=order-service -n order-service
 # Esto muestra logs de TODOS los pods con label app=order-service
 ```
 
-### 7.4 Obtener todas las órdenes
-```bash
-# GET sin path variable = devuelve TODAS las órdenes de la BD
-# Cada orden incluye sus items con info del producto enriquecida
+---
+
+### 7.4 Obtener todas las ordenes
+
+#### En CMD:
+```cmd
+REM GET sin path variable = devuelve TODAS las ordenes de la BD
 curl -s http://localhost:30083/api/orders
 ```
 
+#### En PowerShell:
+```powershell
+Invoke-RestMethod -Uri http://localhost:30083/api/orders
+```
+
+---
+
 ### 7.5 Obtener orden por ID
-```bash
-# /orders/1 = busca la orden con id=1
-# Si no existe → devuelve 404 Not Found
+
+#### En CMD:
+```cmd
+REM /orders/1 = busca la orden con id=1. Si no existe -> devuelve 404
 curl -s http://localhost:30083/api/orders/1
 ```
 
-### 7.6 Obtener órdenes por usuario
-```bash
-# /orders/user/1 = filtra órdenes donde userId=1
-# Útil para mostrar "mis pedidos" en un frontend
+#### En PowerShell:
+```powershell
+Invoke-RestMethod -Uri http://localhost:30083/api/orders/1
+```
+
+---
+
+### 7.6 Obtener ordenes por usuario
+
+#### En CMD:
+```cmd
+REM /orders/user/1 = filtra ordenes donde userId=1
+REM Util para mostrar "mis pedidos" en un frontend
 curl -s http://localhost:30083/api/orders/user/1
 ```
 
-### 7.7 Error: producto inexistente
-```bash
-# productId 9999 no existe en Product Service
-# Order-service intenta obtenerlo, product-service devuelve 404
-# Order-service convierte eso en un error 503
-# 503 = Service Unavailable (dependencia externa falló)
-curl -s -X POST http://localhost:30083/api/orders \
-  -H "Content-Type: application/json" \
-  -d '{"userId": 1, "items": [{"productId": 9999, "quantity": 1}]}'
-
-# Esperado:
-# {"status":503,"message":"Product not found with id: 9999"}
+#### En PowerShell:
+```powershell
+Invoke-RestMethod -Uri http://localhost:30083/api/orders/user/1
 ```
+
+---
+
+### 7.7 Error: producto inexistente
+
+#### En CMD:
+```cmd
+REM productId 9999 no existe en Product Service
+REM Order-service intenta obtenerlo, product-service devuelve 404
+REM Order-service convierte eso en un error 503
+curl.exe -s -X POST http://localhost:30083/api/orders -H "Content-Type: application/json" -d "{\"userId\": 1, \"items\": [{\"productId\": 9999, \"quantity\": 1}]}"
+```
+
+#### En PowerShell:
+```powershell
+# productId 9999 no existe en Product Service
+# 503 = Service Unavailable (dependencia externa fallo)
+Invoke-RestMethod -Uri http://localhost:30083/api/orders `
+  -Method POST `
+  -Headers @{ "Content-Type" = "application/json" } `
+  -Body '{"userId": 1, "items": [{"productId": 9999, "quantity": 1}]}'
+```
+
+**Esperado:** `{"status":503,"message":"Product not found with id: 9999"}`
+
+---
 
 ### 7.8 Error: orden inexistente
-```bash
-# Buscar orden id=9999 que no existe en la BD
-# 404 = Not Found
-curl -s http://localhost:30083/api/orders/9999
 
-# Esperado:
-# {"status":404,"message":"Order not found with id: 9999"}
+#### En CMD:
+```cmd
+REM Buscar orden id=9999 que no existe en la BD. 404 = Not Found
+curl -s http://localhost:30083/api/orders/9999
 ```
+
+#### En PowerShell:
+```powershell
+# Buscar orden id=9999 que no existe en la BD. 404 = Not Found
+Invoke-RestMethod -Uri http://localhost:30083/api/orders/9999
+```
+
+**Esperado:** `{"status":404,"message":"Order not found with id: 9999"}`
 
 ---
 
@@ -772,7 +853,7 @@ echo ""
 echo "=== ORDER SERVICE ===" && kubectl get all -n order-service
 ```
 
-### Docker Desktop - Pestaña KUBERNETES
+### Docker Desktop - Pestana KUBERNETES
 ```
 Abre Docker Desktop > Kubernetes
 
@@ -790,15 +871,15 @@ Vista completa del cluster con los 3 microservicios:
     - Pod: order-service-xxxxx (Running)
     - Service: NodePort 80:30083
 
-¡Tienes 3 microservicios corriendo en Kubernetes!
-Cada uno en su propio namespace, aislado pero comunicándose via DNS.
+Tienes 3 microservicios corriendo en Kubernetes!
+Cada uno en su propio namespace, aislado pero comunicandose via DNS.
 ```
 
-### Docker Desktop - Pestaña CONTAINERS
+### Docker Desktop - Pestana CONTAINERS
 ```
 Abre Docker Desktop > Containers
 
-Verás TODOS los contenedores del sistema:
+Veras TODOS los contenedores del sistema:
 
   Contenedores de BD (creados por docker-compose):
     - postgres-user      (puerto 5434)
@@ -811,35 +892,35 @@ Verás TODOS los contenedores del sistema:
     - k8s_order-service_...      (pod de order-service)
 
 REGLA IMPORTANTE:
-  - Contenedores SIN prefijo "k8s_" → gestionados por Docker (docker-compose)
-    → Puedes detenerlos con "docker stop" o "docker-compose down"
+  - Contenedores SIN prefijo "k8s_" -> gestionados por Docker (docker-compose)
+    -> Puedes detenerlos con "docker stop" o "docker-compose down"
 
-  - Contenedores CON prefijo "k8s_" → gestionados por Kubernetes
-    → NO los detengas con "docker stop" (K8s los recreará)
-    → Para eliminarlos, usa "kubectl delete deployment"
+  - Contenedores CON prefijo "k8s_" -> gestionados por Kubernetes
+    -> NO los detengas con "docker stop" (K8s los recreara)
+    -> Para eliminarlos, usa "kubectl delete deployment"
 ```
 
 ---
 
-## Comandos útiles de troubleshooting
+## Comandos utiles de troubleshooting
 
 ### Si el pod no arranca (CrashLoopBackOff o Error):
 ```bash
 # kubectl get events = ver el historial de eventos del namespace
-# --sort-by=.lastTimestamp = ordenar por fecha (más recientes primero)
+# --sort-by=.lastTimestamp = ordenar por fecha (mas recientes primero)
 #
-# Los eventos te dicen QUÉ PASÓ: si la imagen no se encontró,
-# si el pod se quedó sin memoria, si falló el health check, etc.
+# Los eventos te dicen QUE PASO: si la imagen no se encontro,
+# si el pod se quedo sin memoria, si fallo el health check, etc.
 kubectl get events -n order-service --sort-by=.lastTimestamp
 
-# kubectl describe pod = información DETALLADA del pod
+# kubectl describe pod = informacion DETALLADA del pod
 # Muestra: estado, variables de entorno, eventos, condiciones, etc.
-# Busca la sección "Events:" al final para ver qué falló
+# Busca la seccion "Events:" al final para ver que fallo
 kubectl describe pod <POD_NAME> -n order-service
 
-# Ver logs de un pod que se reinició (crashed)
-# --previous = muestra los logs de la ejecución ANTERIOR (antes del crash)
-# Sin --previous, verías los logs del intento actual que puede estar vacío
+# Ver logs de un pod que se reinicio (crashed)
+# --previous = muestra los logs de la ejecucion ANTERIOR (antes del crash)
+# Sin --previous, verias los logs del intento actual que puede estar vacio
 kubectl logs <POD_NAME> -n order-service --previous
 ```
 
@@ -848,48 +929,48 @@ kubectl logs <POD_NAME> -n order-service --previous
 # Abrir shell dentro del pod para diagnosticar problemas de red
 kubectl exec -it <POD_NAME> -n order-service -- /bin/sh
 
-# Probar conexión a product-service (desde dentro del cluster)
+# Probar conexion a product-service (desde dentro del cluster)
 # wget -qO- = descargar y mostrar en consola
-# Si funciona → la comunicación entre servicios está OK
+# Si funciona -> la comunicacion entre servicios esta OK
 wget -qO- http://product-service.product-service.svc.cluster.local/api/products/health
 
-# Probar conexión a la BD
+# Probar conexion a la BD
 # nc = netcat, herramienta para probar conexiones TCP
-# -z = solo probar si el puerto está abierto (no enviar datos)
+# -z = solo probar si el puerto esta abierto (no enviar datos)
 # -w 3 = timeout de 3 segundos
 nc -z -w 3 host.docker.internal 5435 && echo "BD accesible" || echo "BD NO accesible"
 
 exit
 ```
 
-### Otros comandos útiles:
+### Otros comandos utiles:
 ```bash
-# Reiniciar deployment (útil después de reconstruir la imagen Docker)
+# Reiniciar deployment (util despues de reconstruir la imagen Docker)
 # rolling restart = crea un pod nuevo y luego mata el viejo
-# Así no hay downtime (siempre hay al menos 1 pod corriendo)
+# Asi no hay downtime (siempre hay al menos 1 pod corriendo)
 kubectl rollout restart deployment order-service -n order-service
 
-# Ver estado del rollout (¿ya terminó de reiniciar?)
+# Ver estado del rollout (ya termino de reiniciar?)
 kubectl rollout status deployment order-service -n order-service
 
-# Escalar a más réplicas (más pods = más capacidad)
-# K8s crea pods adicionales y el Service balancea tráfico entre ellos
+# Escalar a mas replicas (mas pods = mas capacidad)
+# K8s crea pods adicionales y el Service balancea trafico entre ellos
 kubectl scale deployment order-service --replicas=2 -n order-service
 
 # Verificar que hay 2 pods corriendo
 kubectl get pods -n order-service
-# Deberías ver 2 pods (cada uno con nombre diferente)
+# Deberias ver 2 pods (cada uno con nombre diferente)
 ```
 
 ---
 
-## Redespliegue rápido (después de cambios en código)
+## Redespliegue rapido (despues de cambios en codigo)
 
-Cuando modificas el código y quieres ver los cambios en Kubernetes:
+Cuando modificas el codigo y quieres ver los cambios en Kubernetes:
 
 ```bash
 # PASO 1: Recompilar el JAR
-# maven compila tu código Java y genera un nuevo .jar con los cambios
+# maven compila tu codigo Java y genera un nuevo .jar con los cambios
 cd order-service
 mvn clean package -DskipTests
 
@@ -902,32 +983,32 @@ docker build -t order-service:1.0 .
 # K8s descarta los pods viejos y crea nuevos que cargan la imagen actualizada
 kubectl rollout restart deployment order-service -n order-service
 
-# PASO 4: Esperar a que el nuevo pod esté listo
-# -w = "watch" = refrescar automáticamente hasta que presiones Ctrl+C
-# Verás cómo el pod viejo se termina y el nuevo arranca
+# PASO 4: Esperar a que el nuevo pod este listo
+# -w = "watch" = refrescar automaticamente hasta que presiones Ctrl+C
+# Veras como el pod viejo se termina y el nuevo arranca
 kubectl get pods -n order-service -w
 
 # PASO 5: Verificar que funciona
 curl http://localhost:30083/api/orders/health
 ```
 
-### Docker Desktop - Pestaña BUILDS
+### Docker Desktop - Pestana BUILDS
 ```
-Después de "docker build":
-  Verás un nuevo build en el historial con estado "Completed".
-  Si usas cache de layers, será más rápido que la primera vez.
+Despues de "docker build":
+  Veras un nuevo build en el historial con estado "Completed".
+  Si usas cache de layers, sera mas rapido que la primera vez.
 ```
 
-### Docker Desktop - Pestaña CONTAINERS
+### Docker Desktop - Pestana CONTAINERS
 ```
-Después de "kubectl rollout restart":
+Despues de "kubectl rollout restart":
   1. Se crea un pod NUEVO (contenedor nuevo aparece)
-  2. K8s espera a que el nuevo pod esté "Ready"
+  2. K8s espera a que el nuevo pod este "Ready"
   3. Se termina el pod VIEJO (contenedor viejo pasa a "Exited")
 
   Esto se llama "Rolling Update":
     Kubernetes NUNCA deja tu app sin servicio.
-    Primero levanta el reemplazo, y DESPUÉS apaga el original.
+    Primero levanta el reemplazo, y DESPUES apaga el original.
 ```
 
 ---
@@ -935,8 +1016,8 @@ Después de "kubectl rollout restart":
 ## Eliminar Order Service de Kubernetes
 
 ```bash
-# OPCIÓN 1: Eliminar recurso por recurso (orden inverso al que creaste)
-# Es buena práctica eliminar en orden inverso para evitar dependencias rotas
+# OPCION 1: Eliminar recurso por recurso (orden inverso al que creaste)
+# Es buena practica eliminar en orden inverso para evitar dependencias rotas
 
 # Primero eliminar el Service (ya nadie puede acceder desde fuera)
 kubectl delete -f k8s/04-service.yaml
@@ -948,14 +1029,14 @@ kubectl delete -f k8s/03-deployment.yaml
 kubectl delete -f k8s/02-secret.yaml
 kubectl delete -f k8s/01-configmap.yaml
 
-# Finalmente el Namespace (ya está vacío)
+# Finalmente el Namespace (ya esta vacio)
 kubectl delete -f k8s/00-namespace.yaml
 
 
-# OPCIÓN 2: Eliminar todo el namespace de una vez (más rápido)
-# Al eliminar el namespace, K8s AUTOMÁTICAMENTE elimina todo lo que contiene:
+# OPCION 2: Eliminar todo el namespace de una vez (mas rapido)
+# Al eliminar el namespace, K8s AUTOMATICAMENTE elimina todo lo que contiene:
 # pods, services, deployments, configmaps, secrets, etc.
-# ⚠️ No pide confirmación - es instantáneo e irreversible
+# No pide confirmacion - es instantaneo e irreversible
 kubectl delete namespace order-service
 ```
 
@@ -971,19 +1052,19 @@ kubectl delete namespace order-service
 
 ---
 
-## Resumen: Qué verificar en Docker Desktop en cada paso
+## Resumen: Que verificar en Docker Desktop en cada paso
 
-| Paso | Pestaña | Qué buscar |
+| Paso | Pestana | Que buscar |
 |------|---------|------------|
 | Antes de empezar | **Images** | order-service:1.0 existe |
 | Antes de empezar | **Containers** | 3 postgres corriendo (punto verde) |
-| Después de crear Namespace | **Kubernetes** | Nuevo namespace "order-service" (vacío) |
-| Después de crear ConfigMap | **Kubernetes** | ConfigMap visible dentro del namespace |
-| Después de crear Secret | **Kubernetes** | Secret visible dentro del namespace |
-| Después de crear Deployment | **Kubernetes** | Pod Running (punto verde) en order-service |
-| Después de crear Deployment | **Containers** | k8s_order-service_... corriendo |
-| Después de crear Service | **Kubernetes** | Service NodePort 80:30083 visible |
-| Después de curl POST | **Containers > Logs** | "Calling Product Service..." en los logs |
-| Después de redespliegue | **Builds** | Nuevo build completado en historial |
-| Después de rollout restart | **Containers** | Pod viejo Exited, pod nuevo Running |
-| Para troubleshooting | **Containers > Logs** | Errores de conexión, stack traces |
+| Despues de crear Namespace | **Kubernetes** | Nuevo namespace "order-service" (vacio) |
+| Despues de crear ConfigMap | **Kubernetes** | ConfigMap visible dentro del namespace |
+| Despues de crear Secret | **Kubernetes** | Secret visible dentro del namespace |
+| Despues de crear Deployment | **Kubernetes** | Pod Running (punto verde) en order-service |
+| Despues de crear Deployment | **Containers** | k8s_order-service_... corriendo |
+| Despues de crear Service | **Kubernetes** | Service NodePort 80:30083 visible |
+| Despues de curl POST | **Containers > Logs** | "Calling Product Service..." en los logs |
+| Despues de redespliegue | **Builds** | Nuevo build completado en historial |
+| Despues de rollout restart | **Containers** | Pod viejo Exited, pod nuevo Running |
+| Para troubleshooting | **Containers > Logs** | Errores de conexion, stack traces |

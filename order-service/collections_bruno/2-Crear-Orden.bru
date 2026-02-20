@@ -1,0 +1,65 @@
+meta {
+  name: 2 - Crear Orden (POST)
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/api/orders
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "userId": 1,
+    "items": [
+      {
+        "productId": 1,
+        "quantity": 2
+      },
+      {
+        "productId": 3,
+        "quantity": 1
+      }
+    ]
+  }
+}
+
+docs {
+  # Crear Orden (Punto 3 Opcional - Calculo automatico de totales)
+
+  Este endpoint ejecuta el flujo completo:
+  1. Recibe userId + lista de items (productId, quantity)
+  2. Para CADA item, llama a Product Service (HTTP) para validar el producto
+  3. Obtiene el precio actual del producto
+  4. Calcula subtotal = quantity x unitPrice
+  5. Calcula totalAmount = suma de subtotals
+  6. Genera numero de orden (ORD-2026-XXX)
+  7. Guarda en BD y retorna la orden creada
+
+  **Respuesta esperada (201 Created):**
+  ```json
+  {
+    "id": 1,
+    "orderNumber": "ORD-2026-001",
+    "userId": 1,
+    "status": "PENDING",
+    "totalAmount": 2689.97,
+    "items": [
+      {
+        "product": { "id": 1, "name": "Laptop Dell XPS 15", "price": 1299.99 },
+        "quantity": 2, "unitPrice": 1299.99, "subtotal": 2599.98
+      },
+      {
+        "product": { "id": 3, "name": "Teclado Mecanico Keychron K8", "price": 89.99 },
+        "quantity": 1, "unitPrice": 89.99, "subtotal": 89.99
+      }
+    ]
+  }
+  ```
+}
