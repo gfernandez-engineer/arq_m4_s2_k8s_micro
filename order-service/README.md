@@ -619,6 +619,4 @@ En la carpeta [`collections_bruno/`](collections_bruno/) se incluye una coleccio
 
 | Guia | Descripcion |
 |------|-------------|
-| [README_01_DOCKER.md](README_01_DOCKER.md) | Validacion paso a paso con Docker: build, ejecucion y prueba de cada endpoint con explicacion de cada comando |
-| [README_02_KUBERNETES.md](README_02_KUBERNETES.md) | Despliegue paso a paso en Kubernetes: manifiestos, health checks, redespliegue y troubleshooting |
 | [collections_bruno/README.md](collections_bruno/README.md) | Como importar y ejecutar las colecciones en Bruno y Postman |
