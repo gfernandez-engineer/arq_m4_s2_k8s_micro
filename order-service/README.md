@@ -344,11 +344,21 @@ docker-compose down -v
 
 ### Si corre en Kubernetes
 
+> En Kubernetes no existe un "contenedor parado" como en Docker.
+> El equivalente a `docker stop` es escalar a 0 replicas: el pod se elimina,
+> pero el Deployment conserva toda la configuracion para recrearlo cuando quieras.
+
 ```bash
-# Opcion 1: Eliminar todos los recursos del namespace de una vez
+# Detener temporalmente (escalar a 0 replicas - conserva configuracion)
+kubectl scale deployment order-service --replicas=0 -n order-service
+
+# Volver a arrancar (restaurar a 1 replica con la misma configuracion)
+kubectl scale deployment order-service --replicas=1 -n order-service
+
+# Eliminar todo: Opcion 1 - borrar el namespace completo de una vez
 kubectl delete namespace order-service
 
-# Opcion 2: Eliminar recurso por recurso (orden inverso)
+# Eliminar todo: Opcion 2 - recurso por recurso (orden inverso)
 kubectl delete -f k8s/04-service.yaml
 kubectl delete -f k8s/03-deployment.yaml
 kubectl delete -f k8s/02-secret.yaml

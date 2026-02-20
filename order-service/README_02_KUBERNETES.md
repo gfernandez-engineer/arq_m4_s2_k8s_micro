@@ -1013,7 +1013,44 @@ Despues de "kubectl rollout restart":
 
 ---
 
-## Eliminar Order Service de Kubernetes
+## Detener y limpiar Order Service de Kubernetes
+
+### Detener temporalmente (sin eliminar configuracion)
+
+```bash
+# kubectl scale = cambiar el numero de replicas (pods) de un deployment
+# --replicas=0 = cero pods corriendo = servicio detenido
+# La configuracion (Deployment, Service, ConfigMap, Secret) se CONSERVA.
+# Es el equivalente a "docker stop" pero en Kubernetes.
+kubectl scale deployment order-service --replicas=0 -n order-service
+
+# Verificar que no quedan pods corriendo
+kubectl get pods -n order-service
+# Output esperado: No resources found in order-service namespace.
+
+# Para volver a arrancar el servicio:
+# --replicas=1 = crear 1 pod nuevo usando la misma configuracion guardada
+kubectl scale deployment order-service --replicas=1 -n order-service
+
+# Verificar que el pod arranco de nuevo
+kubectl get pods -n order-service
+# Output esperado:
+# NAME                             READY   STATUS    RESTARTS   AGE
+# order-service-6b8f9d7c4f-abc12  1/1     Running   0          30s
+```
+
+```
+ANALOGIA CON DOCKER:
+  docker stop order-service  <->  kubectl scale deployment order-service --replicas=0 -n order-service
+  docker start order-service <->  kubectl scale deployment order-service --replicas=1 -n order-service
+
+DIFERENCIA CLAVE:
+  En Docker, el contenedor "para" pero sigue existiendo (docker ps -a lo muestra).
+  En Kubernetes, el pod se ELIMINA (no hay pods en estado "Stopped").
+  La informacion que persiste es el Deployment, que recuerda como crear nuevos pods.
+```
+
+### Eliminar Order Service de Kubernetes
 
 ```bash
 # OPCION 1: Eliminar recurso por recurso (orden inverso al que creaste)
