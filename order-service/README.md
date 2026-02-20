@@ -326,6 +326,44 @@ PowerShell: `Invoke-RestMethod -Uri http://localhost:30083/api/orders/9999`
 
 ---
 
+## Detener y limpiar
+
+### Si corre en Docker
+
+```bash
+# Detener y eliminar el contenedor de order-service
+docker stop order-service
+docker rm order-service
+
+# Detener las bases de datos (los datos se conservan en los volumenes)
+docker-compose down
+
+# Detener las bases de datos Y borrar todos los datos
+docker-compose down -v
+```
+
+### Si corre en Kubernetes
+
+```bash
+# Opcion 1: Eliminar todos los recursos del namespace de una vez
+kubectl delete namespace order-service
+
+# Opcion 2: Eliminar recurso por recurso (orden inverso)
+kubectl delete -f k8s/04-service.yaml
+kubectl delete -f k8s/03-deployment.yaml
+kubectl delete -f k8s/02-secret.yaml
+kubectl delete -f k8s/01-configmap.yaml
+kubectl delete -f k8s/00-namespace.yaml
+```
+
+### Eliminar la imagen Docker (opcional)
+
+```bash
+docker rmi order-service:1.0
+```
+
+---
+
 ## Resumen de puertos
 
 | Servicio | Puerto App | NodePort K8s | Puerto BD |
