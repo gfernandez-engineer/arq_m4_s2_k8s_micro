@@ -54,4 +54,9 @@ public class OrderRepositoryImpl implements OrderRepository {
         OrderEntity savedEntity = jpaOrderRepository.save(entity);
         return mapper.toDomain(savedEntity);
     }
+
+    @Override
+    public long count() {
+        return jpaOrderRepository.count();
+    }
 }

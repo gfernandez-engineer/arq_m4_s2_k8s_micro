@@ -2,10 +2,9 @@ package com.tecsup.app.micro.order_service.presentation.mapper;
 
 import com.tecsup.app.micro.order_service.domain.model.Order;
 import com.tecsup.app.micro.order_service.domain.model.OrderItem;
-import com.tecsup.app.micro.order_service.presentation.dto.CreateOrderRequest;
-import com.tecsup.app.micro.order_service.presentation.dto.OrderItemRequest;
-import com.tecsup.app.micro.order_service.presentation.dto.OrderResponse;
+import com.tecsup.app.micro.order_service.presentation.dto.*;
 import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
 
 import java.util.List;
 
@@ -15,6 +14,17 @@ public interface OrderDtoMapper {
     OrderResponse toResponse(Order order);
 
     List<OrderResponse> toResponseList(List<Order> orders);
+
+    @Mapping(target = "product", expression = "java(mapProductInfo(item))")
+    OrderItemResponse toItemResponse(OrderItem item);
+
+    default ProductInfo mapProductInfo(OrderItem item) {
+        return ProductInfo.builder()
+                .id(item.getProductId())
+                .name(item.getProductName())
+                .price(item.getUnitPrice())
+                .build();
+    }
 
     default OrderItem toOrderItem(OrderItemRequest request) {
         return OrderItem.builder()

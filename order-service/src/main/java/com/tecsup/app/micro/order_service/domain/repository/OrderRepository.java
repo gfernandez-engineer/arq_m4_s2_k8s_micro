@@ -14,4 +14,6 @@ public interface OrderRepository {
     List<Order> findByUserId(Long userId);
 
     Order save(Order order);
+
+    long count();
 }

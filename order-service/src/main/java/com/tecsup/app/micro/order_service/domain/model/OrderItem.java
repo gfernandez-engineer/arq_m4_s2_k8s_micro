@@ -16,8 +16,7 @@ public class OrderItem {
     private Long id;
     private Long orderId;
     private Long productId;
-    private String productName;
-    private BigDecimal productPrice;
+    private String productName;  // Transient - populated from ProductClient, not persisted
     private Integer quantity;
     private BigDecimal unitPrice;
     private BigDecimal subtotal;

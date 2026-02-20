@@ -1,0 +1,96 @@
+# ============================================
+# DEPLOYMENT - Gestión de Pods
+# ============================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: order-service
+  namespace: order-service
+  labels:
+    app: order-service
+
+spec:
+  # ========================================
+  # Número de réplicas (copias)
+  # ========================================
+  replicas: 1
+
+  # ========================================
+  # Selector: ¿Qué pods gestionar?
+  # ========================================
+  selector:
+    matchLabels:
+      app: order-service
+
+  # ========================================
+  # Template: Cómo crear cada pod
+  # ========================================
+  template:
+    metadata:
+      labels:
+        app: order-service
+
+    spec:
+      containers:
+        - name: order-service
+
+          # Imagen Docker
+          image: order-service:1.0
+
+          # imagePullPolicy:
+          # - Never: Solo usar imagen local (desarrollo)
+          # - Always: Siempre descargar (producción)
+          imagePullPolicy: Never
+
+          # Puerto del contenedor
+          ports:
+            - containerPort: 8083
+              name: http
+
+          # ====================================
+          # VARIABLES DE ENTORNO
+          # ====================================
+          env:
+            # Desde ConfigMap
+            - name: PRODUCT_SERVICE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: order-service-config
+                  key: PRODUCT_SERVICE_URL
+
+            - name: DB_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: order-service-config
+                  key: DB_URL
+
+            - name: DDL_AUTO
+              valueFrom:
+                configMapKeyRef:
+                  name: order-service-config
+                  key: DDL_AUTO
+
+            - name: LOG_LEVEL
+              valueFrom:
+                configMapKeyRef:
+                  name: order-service-config
+                  key: LOG_LEVEL
+
+            - name: JAVA_OPTS
+              valueFrom:
+                configMapKeyRef:
+                  name: order-service-config
+                  key: JAVA_OPTS
+
+            # Desde Secret
+            - name: DB_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: order-service-secret
+                  key: DB_USERNAME
+
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: order-service-secret
+                  key: DB_PASSWORD

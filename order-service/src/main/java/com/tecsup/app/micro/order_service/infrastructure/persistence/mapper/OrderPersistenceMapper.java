@@ -16,12 +16,14 @@ public interface OrderPersistenceMapper {
     Order toDomain(OrderEntity entity);
 
     @Mapping(target = "orderId", source = "order.id")
+    @Mapping(target = "productName", ignore = true)
     OrderItem toItemDomain(OrderItemEntity entity);
 
     @Mapping(target = "items", source = "items")
     OrderEntity toEntity(Order order);
 
     @Mapping(target = "order", ignore = true)
+    @Mapping(target = "id", ignore = true)
     OrderItemEntity toItemEntity(OrderItem item);
 
     List<Order> toDomainList(List<OrderEntity> entities);

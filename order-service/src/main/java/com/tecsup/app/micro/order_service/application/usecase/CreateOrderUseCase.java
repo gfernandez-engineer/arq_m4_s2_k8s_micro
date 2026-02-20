@@ -13,8 +13,9 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.Year;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicLong;
+import java.util.Map;
 
 @Component
 @RequiredArgsConstructor
@@ -24,8 +25,6 @@ public class CreateOrderUseCase {
     private final OrderRepository orderRepository;
     private final ProductClient productClient;
 
-    private static final AtomicLong orderSequence = new AtomicLong(1);
-
     public Order execute(Long userId, List<OrderItem> requestItems) {
         log.debug("Executing CreateOrderUseCase for userId: {}", userId);
 
@@ -34,6 +33,7 @@ public class CreateOrderUseCase {
         }
 
         List<OrderItem> items = new ArrayList<>();
+        Map<Long, String> productNames = new HashMap<>();
         BigDecimal totalAmount = BigDecimal.ZERO;
 
         for (OrderItem requestItem : requestItems) {
@@ -42,10 +42,11 @@ public class CreateOrderUseCase {
             BigDecimal unitPrice = product.getPrice();
             BigDecimal subtotal = unitPrice.multiply(BigDecimal.valueOf(requestItem.getQuantity()));
 
+            productNames.put(product.getId(), product.getName());
+
             OrderItem item = OrderItem.builder()
                     .productId(product.getId())
                     .productName(product.getName())
-                    .productPrice(product.getPrice())
                     .quantity(requestItem.getQuantity())
                     .unitPrice(unitPrice)
                     .subtotal(subtotal)
@@ -60,7 +61,7 @@ public class CreateOrderUseCase {
         Order order = Order.builder()
                 .orderNumber(orderNumber)
                 .userId(userId)
-                .status("CREATED")
+                .status("PENDING")
                 .totalAmount(totalAmount)
                 .items(items)
                 .createdAt(LocalDateTime.now())
@@ -70,10 +71,18 @@ public class CreateOrderUseCase {
         Order savedOrder = orderRepository.save(order);
         log.info("Order created successfully with number: {}", savedOrder.getOrderNumber());
 
+        // Enrich saved items with product names (not persisted in DB)
+        if (savedOrder.getItems() != null) {
+            savedOrder.getItems().forEach(item ->
+                    item.setProductName(productNames.get(item.getProductId()))
+            );
+        }
+
         return savedOrder;
     }
 
     private String generateOrderNumber() {
-        return String.format("ORD-%d-%06d", Year.now().getValue(), orderSequence.getAndIncrement());
+        long count = orderRepository.count();
+        return String.format("ORD-%d-%03d", Year.now().getValue(), count + 1);
     }
 }
