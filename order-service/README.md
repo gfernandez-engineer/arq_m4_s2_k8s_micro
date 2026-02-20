@@ -336,9 +336,47 @@ PowerShell: `Invoke-RestMethod -Uri http://localhost:30083/api/orders/9999`
 
 ---
 
+## Pruebas con Bruno / Postman
+
+En la carpeta [`collections_bruno/`](collections_bruno/) se incluye una coleccion lista para importar con los 8 requests de validacion.
+
+### Importar en Bruno
+
+1. Abrir Bruno > **Collection > Open Collection**
+2. Seleccionar la carpeta `order-service/collections_bruno/`
+3. Elegir el environment segun donde corre el servicio:
+   - **Docker** (`http://localhost:8083`)
+   - **Kubernetes** (`http://localhost:30083`)
+4. Ejecutar los requests en orden (1 al 8)
+
+### Importar en Postman
+
+1. Abrir Postman > **Import**
+2. Seleccionar el archivo `collections_bruno/Order-Service.postman_collection.json`
+3. La variable `baseUrl` viene como `http://localhost:30083` (K8s). Cambiar a `8083` si usas Docker.
+4. Ejecutar los requests en orden (1 al 8)
+
+### Requests incluidos
+
+| # | Request | Metodo | Endpoint | Status |
+|---|---------|--------|----------|--------|
+| 1 | Health Check | GET | /api/orders/health | 200 |
+| 2 | Crear Orden (Punto 3 Opcional) | POST | /api/orders | 201 |
+| 3 | Listar Ordenes | GET | /api/orders | 200 |
+| 4 | Obtener Orden por ID | GET | /api/orders/1 | 200 |
+| 5 | Ordenes por Usuario | GET | /api/orders/user/1 | 200 |
+| 6 | Error: Producto Inexistente | POST | /api/orders | 503 |
+| 7 | Error: Items Vacios | POST | /api/orders | 400 |
+| 8 | Error: Orden Inexistente | GET | /api/orders/9999 | 404 |
+
+> Ver [collections_bruno/README.md](collections_bruno/README.md) para instrucciones detalladas.
+
+---
+
 ## Guias detalladas
 
 | Guia | Descripcion |
 |------|-------------|
 | [README_01_DOCKER.md](README_01_DOCKER.md) | Validacion paso a paso con Docker |
 | [README_02_KUBERNETES.md](README_02_KUBERNETES.md) | Despliegue paso a paso en Kubernetes |
+| [collections_bruno/README.md](collections_bruno/README.md) | Como usar las colecciones Bruno / Postman |
