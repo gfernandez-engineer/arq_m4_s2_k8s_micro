@@ -1,6 +1,7 @@
 HELP.md
 README_01_DOCKER.md
 README_02_KUBERNETES.md
+README.md
 target/
 .mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
